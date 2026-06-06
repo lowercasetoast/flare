@@ -1,0 +1,593 @@
+Metadata-Version: 2.4
+Name: flare-gfx
+Version: 0.2.0
+Summary: Unicode/braille terminal graphics with color and animation studio.
+License-Expression: MIT
+Keywords: terminal,braille,unicode,ascii-art,graphics,animation
+Requires-Python: >=3.9
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Provides-Extra: image
+Requires-Dist: Pillow>=9.0; extra == "image"
+Dynamic: license-file
+
+# ⠋⠇⠁⠗⠑  flare
+
+**Terminal graphics with unicode, braille, color, and a full animation studio.**
+
+Flare renders 2-D shapes, 3-D scenes, and keyframe animations directly in your terminal using braille, block elements, ASCII ramps, or any character you can type. Every pixel supports ANSI true-color. The `flare.studio` sublibrary gives you a Moon Animator-style timeline with easing, camera animation, layers, and multi-track playback.
+
+```
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⣠⣴⣶⣷⣶⣶⣤⡀⠀⠀⣠⣴⣶⣷⣶⣦⡀⠀
+⠀⠀⢸⣿⣿⣿⣿⣿⣿⣿⣿⠀⢸⣿⣿⣿⣿⣿⣿⣿⠀
+⠀⠀⠈⠻⢿⣿⣿⣿⡿⠟⠁⠀⠈⠻⢿⣿⣿⣿⡿⠋⠀
+```
+
+---
+
+## Quick Install
+
+```bash
+# Core (zero dependencies)
+pip install flare-gfx
+
+# With image support
+pip install "flare-gfx[image]"
+
+# From source
+git clone https://github.com/lowercasetoast/flare
+cd flare
+pip install -e .
+```
+
+---
+
+## 30-Second Demo
+
+```python
+import flare
+from flare.core import Color
+
+c = flare.Canvas(120, 60)
+flare.draw_circle(c, 30, 30, 20, filled=True, color=Color.CYAN)
+flare.draw_rect(c, 60, 15, 40, 30, filled=True, color=Color.MAGENTA)
+flare.draw_gradient_rect(c, 0, 50, 120, 10, Color.RED, Color.BLUE)
+flare.draw_text(c, 5, 5, "FLARE", color=Color.YELLOW)
+c.show()
+```
+
+### Animation studio
+
+```python
+from flare.studio import Studio, Easing
+from flare.core import Color
+
+s = Studio(120, 60, fps=24)
+
+ball = s.add_track("ball", "circle2d")
+ball.keyframe(0,  x=10,  y=30, radius=8, filled=True, color=Color.RED)
+ball.keyframe(48, x=110, y=30, radius=8, filled=True, color=Color.BLUE,
+              easing=Easing.EASE_IN_OUT_BOUNCE)
+
+s.play()
+```
+
+---
+
+## Table of Contents
+
+1. [Canvas](#canvas)
+2. [Color](#color)
+3. [Drawing Functions](#drawing-functions)
+4. [Groups & Transforms](#groups--transforms)
+5. [Image Conversion](#image-conversion)
+6. [3-D Rendering](#3-d-rendering)
+7. [Simple Animation](#simple-animation)
+8. [Charsets](#charsets)
+9. [flare.studio — Animation Studio](#flarestudio--animation-studio)
+10. [Full Examples](#full-examples)
+11. [Project Structure](#project-structure)
+
+---
+
+## Canvas
+
+### `Canvas(width, height, charset='braille', color=True, bg=None)`
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `width` | `int` | Pixel width |
+| `height` | `int` | Pixel height |
+| `charset` | `str` | `'braille'` (default), `'block'`, or a custom ramp string |
+| `color` | `bool` | Enable ANSI true-color (default `True`) |
+| `bg` | `Color` | Background color |
+
+```python
+c = flare.Canvas(120, 60)                        # braille + color
+c = flare.Canvas(80, 40, charset='block')        # block elements
+c = flare.Canvas(80, 40, charset=' .:-=+*#%@')  # ASCII ramp
+c = flare.Canvas(80, 40, color=False)            # no color
+```
+
+### Canvas methods
+
+| Method | Description |
+|--------|-------------|
+| `set_pixel(x, y, value=1.0, color=None)` | Set a single pixel |
+| `get_pixel(x, y)` | Read pixel brightness |
+| `get_pixel_color(x, y)` | Read pixel color |
+| `set_color(color)` | Set the active drawing color |
+| `clear()` | Reset all pixels to 0 |
+| `render()` | Return canvas as a multi-line string |
+| `show()` | Print the canvas |
+| `add_group(name, group)` | Register a named Group |
+| `get_group(name)` | Retrieve a group by name |
+| `draw_group(name)` | Draw a named group |
+| `draw_all()` | Draw all registered groups |
+
+---
+
+## Color
+
+### `Color(r, g, b)`
+
+```python
+from flare.core import Color
+
+Color(255, 60, 60)             # from RGB
+Color.from_hex("#00ffcc")      # from hex
+Color.from_hsv(270, 1.0, 1.0) # from HSV (h=0-360, s/v=0-1)
+Color.RED.lerp(Color.BLUE, 0.5)# interpolate -> purple
+```
+
+### Built-in constants
+
+`Color.RED` `Color.GREEN` `Color.BLUE` `Color.WHITE` `Color.BLACK`
+`Color.YELLOW` `Color.CYAN` `Color.MAGENTA` `Color.ORANGE` `Color.PINK`
+
+### Color methods
+
+| Method | Description |
+|--------|-------------|
+| `Color(r, g, b)` | RGB 0–255 |
+| `Color.from_hex(s)` | Parse `"#rrggbb"` |
+| `Color.from_hsv(h, s, v)` | h=0–360, s/v=0–1 |
+| `color.lerp(other, t)` | Interpolate (t=0–1) |
+| `color.ansi_fg()` | ANSI foreground escape string |
+| `color.ansi_bg()` | ANSI background escape string |
+
+---
+
+## Drawing Functions
+
+All accept `canvas` as first arg and optional `color=` parameter.
+
+| Function | Description |
+|----------|-------------|
+| `draw_pixel(canvas, x, y, value=1.0, color=None)` | Single pixel |
+| `draw_line(canvas, x0, y0, x1, y1, value=1.0, color=None)` | Bresenham line |
+| `draw_rect(canvas, x, y, w, h, filled=False, value=1.0, color=None)` | Rectangle |
+| `draw_circle(canvas, cx, cy, radius, filled=False, value=1.0, color=None)` | Circle |
+| `draw_ellipse(canvas, cx, cy, rx, ry, filled=False, value=1.0, color=None)` | Ellipse |
+| `draw_triangle(canvas, x0,y0, x1,y1, x2,y2, filled=False, value=1.0, color=None)` | Triangle |
+| `draw_polygon(canvas, points, filled=False, value=1.0, color=None)` | Polygon |
+| `draw_text(canvas, x, y, text, color=None)` | 3×5 bitmap text |
+| `draw_bezier(canvas, points, steps=200, value=1.0, color=None)` | Bézier curve |
+| `draw_gradient_rect(canvas, x, y, w, h, color_a, color_b, direction='horizontal')` | Gradient fill |
+
+```python
+flare.draw_circle(c, 60, 30, 20, filled=True, color=Color.CYAN)
+flare.draw_gradient_rect(c, 0, 0, 120, 10, Color.RED, Color.BLUE)
+flare.draw_text(c, 10, 5, "HELLO WORLD", color=Color.YELLOW)
+flare.draw_bezier(c, [(10,50),(40,5),(80,50),(110,5)], color=Color.MAGENTA)
+```
+
+---
+
+## Groups & Transforms
+
+```python
+from flare.groups import Group, Shape, Transform
+
+g = flare.Group("ships")
+g.add(Shape(my_draw_fn, name="hero"))
+g.translate(20, 10).rotate(45).scale(2)
+g.draw(canvas)
+
+# Register on canvas by name
+canvas.add_group("ships", g)
+canvas.draw_group("ships")
+canvas.draw_all()
+```
+
+### Group methods
+
+| Method | Description |
+|--------|-------------|
+| `g.add(child)` | Add Shape or nested Group |
+| `g.remove(child)` | Remove a child |
+| `g.clear()` | Remove all children |
+| `g.get_child(name)` | Find child by name |
+| `g.translate(dx, dy)` | Shift the group |
+| `g.rotate(angle_deg)` | Rotate CCW |
+| `g.scale(sx, sy=None)` | Scale |
+| `g.move_to(x, y)` | Set absolute position |
+| `g.reset_transform()` | Reset to identity |
+| `g.draw(canvas)` | Draw all children |
+
+### Transform
+
+| Method | Description |
+|--------|-------------|
+| `Transform.identity()` | Identity transform |
+| `t.translate(dx, dy)` | New translated transform |
+| `t.rotate(angle_deg)` | New rotated transform (CCW) |
+| `t.scale(sx, sy=None)` | New scaled transform |
+| `t.apply(x, y)` | Transform point → `(x′, y′)` |
+
+---
+
+## Image Conversion
+
+> Requires `pip install "flare-gfx[image]"`
+
+```python
+# From file
+c = flare.from_file("photo.png", width=120, height=60, dither=True)
+
+# From Pillow Image
+from PIL import Image
+c = flare.from_pil(Image.open("art.png").rotate(45), width=80)
+
+# From raw pixel grid (2-D list of 0.0–1.0 floats)
+c = flare.from_pixels(grid, grayscale=True)
+```
+
+| Parameter | Description |
+|-----------|-------------|
+| `width/height` | Output size (preserves aspect ratio if only one given) |
+| `threshold` | Brightness cutoff for on/off pixels (default 0.5) |
+| `invert` | Swap light and dark |
+| `dither` | Floyd–Steinberg dithering |
+| `grayscale` | Store raw brightness — use with ramp charsets |
+
+---
+
+## 3-D Rendering
+
+No external libraries required. Full perspective pipeline in pure Python.
+
+```python
+cam   = flare.Camera(position=(0, 1.5, -5), target=(0,0,0), fov_deg=60)
+cube  = flare.make_cube(1.5)
+cube.rotate_y(35).rotate_x(20)
+
+scene = flare.Scene(cam)
+scene.add(cube)
+scene.render_to(canvas)
+```
+
+### Camera
+
+| Parameter | Default | Description |
+|-----------|---------|-------------|
+| `position` | `(0,0,-5)` | Eye position |
+| `target` | `(0,0,0)` | Look-at point |
+| `up` | `(0,1,0)` | Up vector |
+| `fov_deg` | `60` | Field of view |
+| `near/far` | `0.1/1000` | Clip planes |
+
+### Mesh methods
+
+| Method | Description |
+|--------|-------------|
+| `mesh.translate(dx, dy, dz)` | Move in world space |
+| `mesh.rotate_x/y/z(deg)` | Rotate around axis |
+| `mesh.scale(sx, sy, sz)` | Scale |
+| `mesh.reset_transform()` | Reset to identity |
+
+### Built-in mesh factories
+
+| Function | Description |
+|----------|-------------|
+| `make_cube(size=1.0)` | Unit cube |
+| `make_sphere(radius=1.0, lat=8, lon=12)` | UV sphere |
+| `make_plane(w=2.0, h=2.0, nx=4, ny=4)` | Flat XZ grid |
+
+---
+
+## Simple Animation
+
+```python
+c    = flare.Canvas(120, 60)
+anim = flare.Animation(c, fps=24, clear_mode='inline')
+
+def update(canvas, frame, elapsed):
+    flare.draw_circle(canvas, 60, 30, int(10 + 8*math.sin(elapsed*2)),
+                      filled=True, color=Color.CYAN)
+
+anim.play(update, duration=10, loop=True)
+
+# Export frames without displaying
+rendered = flare.frames(c, update_fn, count=48)
+```
+
+---
+
+## Charsets
+
+| Constant | Description |
+|----------|-------------|
+| `BRAILLE` | `'braille'` — 2×4 braille cells (default) |
+| `BLOCK` | `'block'` — 2×2 block elements |
+| `ASCII_RAMP` | `" .:-=+*#%@"` — 10-level ASCII |
+| `EXTENDED_RAMP` | 70-char detailed ASCII ramp |
+| `SHADE_RAMP` | `" ░▒▓█"` — unicode shade blocks |
+| `DOTS_RAMP` | `" .:;!I#@"` |
+| `NUMBERS_RAMP` | `" 123456789"` |
+| `HEX_RAMP` | `" 0-9A-F"` |
+| `MATRIX_RAMP` | `" 01"` |
+| `BRAILLE_RAMP` | All 256 braille code points as grayscale ramp |
+| `BOX_DRAWING` | `"─│┌┐└┘├┤┬┴┼"` |
+| `ARROWS` | `"←→↑↓↔↕⇐⇒⇑⇓"` |
+| `MATH` | `"∑∏∫∂∆∇±×÷≤≥≠≈∞"` |
+
+```python
+c = flare.Canvas(80, 40, charset=flare.charsets.SHADE_RAMP)
+```
+
+---
+
+## flare.studio — Animation Studio
+
+Import separately — it's a sublibrary:
+
+```python
+from flare.studio import Studio, Easing, CameraTrack
+```
+
+### Studio
+
+```python
+s = Studio(
+    canvas_width=120,
+    canvas_height=60,
+    fps=24,
+    charset='braille',
+    color=True,
+    loop=True,
+)
+```
+
+| Method | Description |
+|--------|-------------|
+| `s.add_track(name, kind, layer=None, draw_fn=None)` | Add an object track |
+| `s.add_layer(name)` | Create a layer |
+| `s.add_camera(name)` | Create an animated camera |
+| `s.set_active_camera(name)` | Choose active camera for 3-D |
+| `s.get_track(name)` | Get track by name |
+| `s.remove_track(name)` | Remove a track |
+| `s.render_frame(frame)` | Render one frame → string |
+| `s.play(start, end, loop, clear_mode)` | Play in terminal |
+| `s.export_frames(start, end)` | Return all frames as `list[str]` |
+| `s.export_gif_frames(path_template)` | Write frames to text files |
+| `s.on_pre_frame(fn)` | Hook: `fn(canvas, frame, elapsed)` before draw |
+| `s.on_post_frame(fn)` | Hook: `fn(canvas, frame, elapsed)` after draw |
+| `s.info()` | Print track/layer summary |
+| `s.total_frames` | Last keyframe across all tracks |
+
+### Track & Keyframe
+
+```python
+track = s.add_track("ball", "circle2d")
+
+track.keyframe(0,  x=10, y=30, radius=8, filled=True, color=Color.RED)
+track.keyframe(48, x=110,y=30, radius=8, filled=True, color=Color.BLUE,
+               easing=Easing.EASE_IN_OUT_BOUNCE)
+```
+
+| Method | Description |
+|--------|-------------|
+| `track.keyframe(frame, easing=None, **props)` | Add/update keyframe |
+| `track.remove_keyframe(frame)` | Remove keyframe |
+| `track.clear_keyframes()` | Remove all |
+| `track.state_at(frame)` | Interpolated props dict at frame |
+| `track.duration` | Last keyframe number |
+| `track.visible` | Show/hide bool |
+
+### Easing
+
+25 easing functions — use as attributes or name strings:
+
+```python
+track.keyframe(30, x=100, easing=Easing.EASE_OUT_BOUNCE)
+track.keyframe(30, x=100, easing="ease_out_bounce")  # same thing
+```
+
+| Category | Names |
+|----------|-------|
+| Basic | `linear`, `step` |
+| Quad | `ease_in/out/in_out_quad` |
+| Cubic | `ease_in/out/in_out_cubic` |
+| Quart | `ease_in/out/in_out_quart` |
+| Sine | `ease_in/out/in_out_sine` |
+| Expo | `ease_in/out/in_out_expo` |
+| Back (overshoot) | `ease_in/out/in_out_back` |
+| Elastic (spring) | `ease_in/out/in_out_elastic` |
+| Bounce | `ease_in/out/in_out_bounce` |
+
+### Layers
+
+```python
+bg = s.add_layer("background")
+fg = s.add_layer("foreground")
+
+sky  = s.add_track("sky",  "gradient", layer="background")
+hero = s.add_track("hero", "circle2d", layer="foreground")
+
+bg.visible = False  # hide entire layer
+```
+
+### CameraTrack
+
+```python
+cam = s.add_camera("main")
+cam.keyframe(0,  px=0, py=2, pz=-6, tx=0, ty=0, tz=0, fov=60)
+cam.keyframe(48, px=3, py=4, pz=-5, fov=45,
+             easing=Easing.EASE_IN_OUT_SINE)
+```
+
+| Property | Default | Description |
+|----------|---------|-------------|
+| `px, py, pz` | `0, 0, -5` | Camera position |
+| `tx, ty, tz` | `0, 0, 0` | Look-at target |
+| `fov` | `60` | Field of view (degrees) |
+| `roll` | `0` | Camera roll (degrees) |
+
+### 2-D track kinds
+
+| `kind` | Key properties |
+|--------|---------------|
+| `circle2d` | `x, y, radius, filled, color` |
+| `rect2d` | `x, y, w, h, filled, color` |
+| `line2d` | `x0, y0, x1, y1, color` |
+| `triangle2d` | `x0,y0, x1,y1, x2,y2, filled, color` |
+| `ellipse2d` | `x, y, rx, ry, filled, color` |
+| `polygon2d` | `points, filled, color` |
+| `bezier2d` | `points, steps, color` |
+| `text2d` | `x, y, text, color` |
+| `pixel` | `x, y, value, color` |
+| `gradient` | `x, y, w, h, color_a, color_b, direction` |
+| `custom` | calls `draw_fn(canvas, props)` directly |
+
+### 3-D track (`mesh3d`)
+
+| Property | Description |
+|----------|-------------|
+| `mesh` | A `flare.Mesh` object |
+| `rx, ry, rz` | Rotation angles (degrees) |
+| `tx, ty, tz` | Translation |
+| `sx/sy/sz` or `scale` | Scale |
+| `color` | Wire color |
+| `draw_points` | Also draw vertex dots |
+
+---
+
+## Full Examples
+
+### Bouncing colored ball
+
+```python
+from flare.studio import Studio, Easing
+from flare.core import Color
+
+s = Studio(120, 60, fps=24)
+ball = s.add_track("ball", "circle2d")
+ball.keyframe(0,  x=10,  y=50, radius=8, filled=True, color=Color.RED)
+ball.keyframe(12, x=35,  y=10, radius=8, filled=True, color=Color.ORANGE,
+              easing=Easing.EASE_OUT_BOUNCE)
+ball.keyframe(24, x=60,  y=50, radius=8, filled=True, color=Color.YELLOW,
+              easing=Easing.EASE_IN_QUAD)
+ball.keyframe(36, x=85,  y=10, radius=8, filled=True, color=Color.GREEN,
+              easing=Easing.EASE_OUT_BOUNCE)
+ball.keyframe(48, x=110, y=50, radius=8, filled=True, color=Color.BLUE,
+              easing=Easing.EASE_IN_QUAD)
+s.play(loop=True)
+```
+
+### Animated 3-D cube with camera
+
+```python
+from flare.studio import Studio, Easing
+from flare.core import Color
+import flare
+
+s = Studio(120, 60, fps=24)
+
+cam = s.add_camera("cam")
+cam.keyframe(0,  px=0, py=1.5, pz=-5, fov=60)
+cam.keyframe(96, px=3, py=3,   pz=-4, fov=50,
+             easing=Easing.EASE_IN_OUT_CUBIC)
+
+cube = s.add_track("cube", "mesh3d")
+mesh = flare.make_cube(1.5)
+cube.keyframe(0,  mesh=mesh, ry=0,   rx=15, color=Color.CYAN)
+cube.keyframe(96, mesh=mesh, ry=360, rx=30, color=Color.MAGENTA,
+              easing=Easing.LINEAR)
+s.play(loop=True)
+```
+
+### Custom draw function track
+
+```python
+from flare.studio import Studio, Easing
+from flare.core import Color
+import flare, math
+
+s = Studio(120, 60, fps=24)
+
+def draw_star(canvas, props):
+    cx    = int(props.get("x", 60))
+    cy    = int(props.get("y", 30))
+    r_out = int(props.get("r_outer", 20))
+    r_in  = int(props.get("r_inner", 8))
+    angle = props.get("angle", 0)
+    col   = props.get("color", Color.YELLOW)
+    pts   = []
+    for i in range(10):
+        r = r_out if i % 2 == 0 else r_in
+        a = math.pi * i / 5 + math.radians(angle)
+        pts.append((int(cx + r * math.cos(a)), int(cy + r * math.sin(a))))
+    flare.draw_polygon(canvas, pts, filled=True, color=col)
+
+star = s.add_track("star", "custom", draw_fn=draw_star)
+star.keyframe(0,  x=60, y=30, r_outer=20, r_inner=8, angle=0,
+              color=Color.YELLOW)
+star.keyframe(48, x=60, y=30, r_outer=25, r_inner=10, angle=180,
+              color=Color.ORANGE, easing=Easing.EASE_IN_OUT_BACK)
+s.play(loop=True)
+```
+
+---
+
+## Project Structure
+
+```
+flare/
+├── flare/
+│   ├── __init__.py       Top-level API
+│   ├── core.py           Canvas + Color
+│   ├── shapes.py         2-D drawing primitives
+│   ├── groups.py         Group, Shape, Transform
+│   ├── image.py          Image → Canvas conversion (Pillow optional)
+│   ├── threed.py         3-D engine: Camera, Mesh, Scene
+│   ├── animation.py      Simple Animation loop + frames()
+│   ├── charsets.py       Character set constants
+│   └── studio/
+│       ├── __init__.py   Studio sublibrary public API
+│       ├── studio.py     Studio — timeline + playback engine
+│       ├── track.py      Track + Keyframe
+│       ├── easing.py     25 easing functions
+│       ├── objects.py    Obj2D + Obj3D shape renderers
+│       └── camera.py     CameraTrack
+├── README.md
+├── LICENSE
+├── pyproject.toml
+└── .gitignore
+```
+
+---
+
+## Requirements
+
+- Python 3.9+
+- No runtime dependencies
+- Optional: `Pillow >= 9.0` for image conversion
+- Terminal with ANSI true-color support recommended (iTerm2, Windows Terminal, most Linux terminals)
+
+---
+
+## License
+
+MIT — see [LICENSE](LICENSE).

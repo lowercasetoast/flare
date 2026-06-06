@@ -1,0 +1,19 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "flare-gfx"
+version = "0.2.0"
+description = "Unicode/braille terminal graphics with color and animation studio."
+readme = "README.md"
+requires-python = ">=3.9"
+license = "MIT"
+keywords = ["terminal", "braille", "unicode", "ascii-art", "graphics", "animation"]
+
+[project.optional-dependencies]
+image = ["Pillow>=9.0"]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["flare*"]

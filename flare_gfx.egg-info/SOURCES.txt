@@ -1,0 +1,11 @@
+LICENSE
+README.md
+pyproject.toml
+flare/__init__.py
+flare/core.py
+flare/shapes.py
+flare_gfx.egg-info/PKG-INFO
+flare_gfx.egg-info/SOURCES.txt
+flare_gfx.egg-info/dependency_links.txt
+flare_gfx.egg-info/requires.txt
+flare_gfx.egg-info/top_level.txt
